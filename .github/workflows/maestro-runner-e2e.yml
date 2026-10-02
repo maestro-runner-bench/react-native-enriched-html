@@ -113,6 +113,21 @@ jobs:
       - name: Install maestro-runner
         run: curl -fsSL https://open.devicelab.dev/install/maestro-runner | bash -s -- --version "$MAESTRO_RUNNER_VERSION"
 
+      # The runner image's Android command-line tools predate the Pixel 9
+      # device profile the project's emulator uses; update them.
+      - name: Update Android command-line tools
+        run: |
+          tools="$ANDROID_HOME/cmdline-tools"
+          yes | "$tools/latest/bin/sdkmanager" --install "cmdline-tools;latest" > /dev/null
+          if [ -d "$tools/latest-2" ]; then
+            rm -rf "$tools/latest" && mv "$tools/latest-2" "$tools/latest"
+          fi
+          "$tools/latest/bin/avdmanager" list device -c | grep -qx pixel_9 || {
+            echo "::error::No pixel_9 device profile. Available:"
+            "$tools/latest/bin/avdmanager" list device -c
+            exit 1
+          }
+
       - name: Start Metro
         run: yarn example start > /tmp/metro.log 2>&1 &
 
