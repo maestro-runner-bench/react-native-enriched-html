@@ -145,7 +145,9 @@ jobs:
           disable-animations: true
           disable-spellchecker: true
           enable-hw-keyboard: true
-          script: .maestro/scripts/ci/run-maestro-runner.sh --platform android --device emulator-5554 ${{ inputs.update_screenshots && '--update-screenshots' || '' }}
+          script: |
+            adb -s emulator-5554 logcat -b main,system,crash -v threadtime > /tmp/logcat.txt 2>&1 &
+            .maestro/scripts/ci/run-maestro-runner.sh --platform android --device emulator-5554 ${{ inputs.update_screenshots && '--update-screenshots' || '' }}
 
       - name: Upload test artifacts
         if: ${{ !cancelled() }}
@@ -158,3 +160,4 @@ jobs:
             .maestro/enrichedInput/screenshots/android/
             .maestro/enrichedText/screenshots/android/
             /tmp/metro.log
+            /tmp/logcat.txt
