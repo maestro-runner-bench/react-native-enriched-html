@@ -46,7 +46,13 @@ set_font_scale() {
     adb -s "$DEVICE_ID" shell settings put system font_scale "$android_scale"
   fi
 }
-trap 'set_font_scale default' EXIT
+LOGCAT_PID=""
+if [ "$PLATFORM" = android ]; then
+  # The device log, for diagnosing a crash of the app or of the agent.
+  adb -s "$DEVICE_ID" logcat -b main,system,crash -v threadtime > "${LOGCAT_FILE:-/tmp/logcat.txt}" 2>&1 &
+  LOGCAT_PID=$!
+fi
+trap 'set_font_scale default; [ -n "$LOGCAT_PID" ] && kill "$LOGCAT_PID" 2>/dev/null' EXIT
 
 echo "=== Building and installing the example app ==="
 cd "$REPO_ROOT"
