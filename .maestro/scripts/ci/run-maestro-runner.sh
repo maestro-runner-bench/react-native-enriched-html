@@ -51,7 +51,13 @@ trap 'set_font_scale default' EXIT
 echo "=== Building and installing the example app ==="
 cd "$REPO_ROOT"
 if [ "$PLATFORM" = ios ]; then
-  yarn example ios --udid "$DEVICE_ID"
+  # The React Native CLI's own install step can fail on CI ("The specified
+  # device was not found") after a good build; install the built app with
+  # simctl as well, so the app is on the simulator either way.
+  yarn example ios --udid "$DEVICE_ID" || true
+  APP=$(ls -dt "$HOME"/Library/Developer/Xcode/DerivedData/EnrichedTextInputExample-*/Build/Products/Debug-iphonesimulator/EnrichedTextInputExample.app 2>/dev/null | head -1)
+  [ -n "$APP" ] || { echo "Error: built app not found" >&2; exit 1; }
+  xcrun simctl install "$DEVICE_ID" "$APP"
 else
   yarn example android --device "$DEVICE_ID"
 fi
