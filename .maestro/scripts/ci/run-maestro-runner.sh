@@ -81,14 +81,21 @@ esac
 # Like run-tests.sh: a tag filter that matches no flows is not a failure
 # (maestro-runner says "no test flows found" where Maestro says "did not
 # match any Flows").
+#
+# The output goes through a pipe to tee, and the runner's exit code comes from
+# PIPESTATUS. A bare `wait` after a process substitution also waited for the
+# background logcat, which never exits: on Android the script hung after the
+# first pass until the job's 90-minute limit.
 run_pass() {
   local name=$1; shift
-  local log rc=0
+  local log rc
   log=$(mktemp)
+  set +e
   # shellcheck disable=SC2086
   "$RUNNER" --platform "$PLATFORM" --device "$DEVICE_ID" test "$@" "${EXTRA[@]}" \
-    --output "$REPORTS/$PLATFORM-$name" --flatten $FLOWS > >(tee "$log") 2>&1 || rc=$?
-  wait
+    --output "$REPORTS/$PLATFORM-$name" --flatten $FLOWS 2>&1 | tee "$log"
+  rc=${PIPESTATUS[0]}
+  set -e
   if [ "$rc" -ne 0 ] && grep -q "no test flows found" "$log"; then
     echo "warn: no flows matched the tag filter, treating as success" >&2
     rc=0
